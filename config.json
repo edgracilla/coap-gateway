@@ -1,0 +1,38 @@
+{
+  "port": {
+    "type": "Number",
+    "label": "Port",
+    "required": true,
+    "help": "The port to use in relaying messages or commands."
+  },
+  "socket_type": {
+    "type": "String",
+    "label": "Socket Type",
+    "enum": ["udp4", "udp6"],
+    "help": "(Optional) The UDP Socket type. Default: udp4",
+    "default": "udp4"
+  },
+  "data_topic": {
+    "type": "String",
+    "label": "Data Topic",
+    "default": "reekoh/data",
+    "help": "The topic to listen to for device data. Default: reekoh/data"
+  },
+  "message_topic": {
+    "type": "String",
+    "label": "Message Topic",
+    "default": "reekoh/messages",
+    "help": "The topic to listen to for device messages or commands. Default: reekoh/messages"
+  },
+  "groupmessage_topic": {
+    "type": "String",
+    "label": "Group Message Topic",
+    "default": "reekoh/groupmessages",
+    "help": "The topic to listen to for group messages or commands. Default: reekoh/groupmessages"
+  },
+  "authorized_topics": {
+    "type": "String",
+    "label": "Authorized Topics",
+    "help": "Other authorized topics the devices can subscribe from and/or publish to."
+  }
+}
