@@ -1,27 +1,27 @@
 'use strict';
 
-const PORT = 8080,
-    DEVICE_ID1 = '567827489028375',
-    DEVICE_ID2 = '567827489028376';
+const PORT       = 8080,
+	  DEVICE_ID1 = '567827489028375',
+	  DEVICE_ID2 = '567827489028376';
 
 var cp     = require('child_process'),
 	assert = require('assert'),
-    coap = require('coap'),
+	coap   = require('coap'),
 	gateway;
 
 describe('Gateway', function () {
 	this.slow(5000);
 
 	after('terminate child process', function () {
-        this.timeout(5000);
+		this.timeout(5000);
 
-        gateway.send({
-            type: 'close'
-        });
+		gateway.send({
+			type: 'close'
+		});
 
-        setTimeout(function () {
-            gateway.kill('SIGKILL');
-        }, 4500);
+		setTimeout(function () {
+			gateway.kill('SIGKILL');
+		}, 4500);
 	});
 
 	describe('#spawn', function () {
@@ -42,15 +42,15 @@ describe('Gateway', function () {
 			gateway.send({
 				type: 'ready',
 				data: {
-                    options: {
-                        port: PORT,
-                        socket_type: 'udp4',
-                        data_topic: 'coapTestData',
-                        message_topic: 'coapTestMessage',
-                        groupmessage_topic: 'CoapTestGroupMessage',
-                        authorized_topics: 'coapTestData,coapTestMessage,CoapTestGroupMessage'
-                    },
-                    devices: [{_id: DEVICE_ID1}, {_id: DEVICE_ID2}]
+					options: {
+						port: PORT,
+						socket_type: 'udp4',
+						data_topic: 'coapTestData',
+						message_topic: 'coapTestMessage',
+						groupmessage_topic: 'CoapTestGroupMessage',
+						authorized_topics: 'coapTestData,coapTestMessage,CoapTestGroupMessage'
+					},
+					devices: [{_id: DEVICE_ID1}, {_id: DEVICE_ID2}]
 				}
 			}, function (error) {
 				assert.ifError(error);
@@ -59,26 +59,26 @@ describe('Gateway', function () {
 	});
 
 	describe('#message', function () {
-        it('it should process the data', function(done){
-            this.timeout(5000);
+		it('it should process the data', function (done) {
+			this.timeout(5000);
 
-            var req = coap.request('coap://localhost:8080/coapTestData');
-            req.on('response', function(res) {
-                assert.equal(res.payload.toString('utf8'), 'TURNOFF');
-                done();
-            });
-            req.end(new Buffer(JSON.stringify({device: '567827489028375', data: 'test data'})));
+			var req = coap.request('coap://localhost:8080/coapTestData');
+			req.on('response', function (res) {
+				assert.equal(res.payload.toString('utf8'), 'TURNOFF');
+				done();
+			});
+			req.end(new Buffer(JSON.stringify({device: '567827489028375', data: 'test data'})));
 
-            setTimeout(function(){
-                gateway.send({
-                    type: 'message',
-                    data: {
-                        client: '567827489028375',
-                        messageId: '55fce1455167c470abeedae2',
-                        message: 'TURNOFF'
-                    }
-                });
-            }, 2000);
-        });
+			setTimeout(function () {
+				gateway.send({
+					type: 'message',
+					data: {
+						client: '567827489028375',
+						messageId: '55fce1455167c470abeedae2',
+						message: 'TURNOFF'
+					}
+				});
+			}, 2000);
+		});
 	});
 });

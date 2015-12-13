@@ -1,10 +1,4 @@
 {
-  "port": {
-    "type": "Number",
-    "label": "Port",
-    "required": true,
-    "help": "The port to use in relaying messages or commands."
-  },
   "socket_type": {
     "type": "String",
     "label": "Socket Type",
@@ -29,10 +23,5 @@
     "label": "Group Message Topic",
     "default": "reekoh/groupmessages",
     "help": "The topic to listen to for group messages or commands. Default: reekoh/groupmessages"
-  },
-  "authorized_topics": {
-    "type": "String",
-    "label": "Authorized Topics",
-    "help": "Other authorized topics the devices can subscribe from and/or publish to."
   }
 }
