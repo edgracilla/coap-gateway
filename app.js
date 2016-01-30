@@ -8,7 +8,7 @@ var platform          = require('./platform'),
 
 platform.on('message', function (message) {
 	if (clients[message.client]) {
-		var client = clients[message.client];
+		let client = clients[message.client];
 
 		client.end(new Buffer(message.message));
 
@@ -41,18 +41,17 @@ platform.on('removedevice', function (device) {
 });
 
 platform.once('close', function () {
-	var domain = require('domain');
-	var d = domain.create();
+	let d = require('domain').create();
 
-	d.once('error', function (error) {
+	d.once('error', (error) => {
 		console.error(error);
 		platform.handleException(error);
 		platform.notifyClose();
 		d.exit();
 	});
 
-	d.run(function () {
-		server.close(function () {
+	d.run(() => {
+		server.close(() => {
 			platform.notifyClose();
 			d.exit();
 		});
@@ -60,16 +59,13 @@ platform.once('close', function () {
 });
 
 platform.once('ready', function (options, registeredDevices) {
-	var clone   = require('lodash.clone'),
-		domain  = require('domain'),
-		indexBy = require('lodash.indexby'),
-		config  = require('./config.json'),
-		coap    = require('coap');
+	let domain = require('domain'),
+		keyBy  = require('lodash.keyby'),
+		config = require('./config.json'),
+		coap   = require('coap');
 
-	if (!isEmpty(registeredDevices)) {
-		var tmpDevices = clone(registeredDevices, true);
-		authorizedDevices = indexBy(tmpDevices, '_id');
-	}
+	if (!isEmpty(registeredDevices))
+		authorizedDevices = keyBy(registeredDevices, '_id');
 
 	if (isEmpty(options.data_topic))
 		options.data_topic = config.data_topic.default;
@@ -82,28 +78,35 @@ platform.once('ready', function (options, registeredDevices) {
 
 	server = coap.createServer({type: options.socket_type});
 
-	server.on('request', function (request, response) {
-		var serverDomain = domain.create();
+	server.on('request', (request, response) => {
+		let serverDomain = domain.create();
 
-		serverDomain.once('error', function (error) {
+		serverDomain.once('error', (error) => {
 			platform.handleException(error);
-			response.end(new Buffer('Invalid data sent. Must be a valid JSON String.'));
+			response.end(new Buffer('Invalid data sent. Data must be a valid JSON String with at least a "device" field which corresponds to a registered Device ID.'));
+
 			serverDomain.exit();
 		});
 
-		serverDomain.run(function () {
+		serverDomain.run(() => {
 			var url        = request.url.split('/')[1],
 				payload    = request.payload.toString(),
 				payloadObj = JSON.parse(request.payload);
 
-			if (isEmpty(payloadObj.device)) return serverDomain.exit();
+			if (isEmpty(payloadObj.device)) {
+				platform.handleException(new Error('Invalid data sent. Data must be a valid JSON String with at least a "device" field which corresponds to a registered Device ID.'));
+
+				return serverDomain.exit();
+			}
 
 			if (isEmpty(authorizedDevices[payloadObj.device])) {
 				platform.log(JSON.stringify({
 					title: 'Unauthorized Device',
 					device: payloadObj.device
 				}));
+
 				response.end(new Buffer('Unauthorized Device.'));
+
 				return serverDomain.exit();
 			}
 
@@ -149,7 +152,7 @@ platform.once('ready', function (options, registeredDevices) {
 		});
 	});
 
-	server.listen(options.port, function () {
+	server.listen(options.port, () => {
 		platform.log('CoAP Gateway initialized on port ' + options.port);
 		platform.notifyReady();
 	});

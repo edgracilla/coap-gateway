@@ -1,6 +1,6 @@
 'use strict';
 
-const PORT       = 8080,
+const PORT       = 8081,
 	  DEVICE_ID1 = '567827489028375',
 	  DEVICE_ID2 = '567827489028376';
 
@@ -9,10 +9,10 @@ var cp     = require('child_process'),
 	coap   = require('coap'),
 	gateway;
 
-describe('Gateway', function () {
+describe('IPV6 Gateway', function () {
 	this.slow(5000);
 
-	after('terminate child process', function () {
+	after('terminate child process', function (done) {
 		this.timeout(5000);
 
 		gateway.send({
@@ -21,7 +21,8 @@ describe('Gateway', function () {
 
 		setTimeout(function () {
 			gateway.kill('SIGKILL');
-		}, 4500);
+			done();
+		}, 2000);
 	});
 
 	describe('#spawn', function () {
@@ -44,7 +45,7 @@ describe('Gateway', function () {
 				data: {
 					options: {
 						port: PORT,
-						socket_type: 'udp4',
+						socket_type: 'udp6',
 						data_topic: 'coapTestData',
 						message_topic: 'coapTestMessage',
 						groupmessage_topic: 'CoapTestGroupMessage',
@@ -59,21 +60,21 @@ describe('Gateway', function () {
 	});
 
 	describe('#message', function () {
-		it('it should process the data', function (done) {
+		it('it should route the data to the target device', function (done) {
 			this.timeout(5000);
 
-			var req = coap.request('coap://localhost:8080/coapTestData');
+			var req = coap.request(`coap://localhost:${PORT}/coapTestData`);
 			req.on('response', function (res) {
 				assert.equal(res.payload.toString('utf8'), 'TURNOFF');
 				done();
 			});
-			req.end(new Buffer(JSON.stringify({device: '567827489028375', data: 'test data'})));
+			req.end(new Buffer(JSON.stringify({device: '567827489028376', data: 'test data'})));
 
 			setTimeout(function () {
 				gateway.send({
 					type: 'message',
 					data: {
-						client: '567827489028375',
+						client: '567827489028376',
 						messageId: '55fce1455167c470abeedae2',
 						message: 'TURNOFF'
 					}
