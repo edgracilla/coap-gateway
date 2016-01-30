@@ -46,10 +46,9 @@ describe('IPV4 Gateway', function () {
 					options: {
 						port: PORT,
 						socket_type: 'udp4',
-						data_topic: 'coapTestData',
-						message_topic: 'coapTestMessage',
-						groupmessage_topic: 'CoapTestGroupMessage',
-						authorized_topics: 'coapTestData,coapTestMessage,CoapTestGroupMessage'
+						data_url: 'coapTestData',
+						message_url: 'coapTestMessage',
+						groupmessage_url: 'CoapTestGroupMessage'
 					},
 					devices: [{_id: DEVICE_ID1}, {_id: DEVICE_ID2}]
 				}
