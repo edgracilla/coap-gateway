@@ -67,60 +67,68 @@ platform.once('ready', function (options, registeredDevices) {
 	if (!isEmpty(registeredDevices))
 		authorizedDevices = keyBy(registeredDevices, '_id');
 
-	if (isEmpty(options.data_topic))
-		options.data_topic = config.data_topic.default;
+	if (isEmpty(options.data_url))
+		options.data_url = config.data_url.default;
 
-	if (isEmpty(options.message_topic))
-		options.message_topic = config.message_topic.default;
+	if (isEmpty(options.message_url))
+		options.message_url = config.message_url.default;
 
-	if (isEmpty(options.groupmessage_topic))
-		options.groupmessage_topic = config.groupmessage_topic.default;
+	if (isEmpty(options.groupmessage_url))
+		options.groupmessage_url = config.groupmessage_url.default;
 
 	server = coap.createServer({type: options.socket_type});
 
 	server.on('request', (request, response) => {
-		let serverDomain = domain.create();
+		let d = domain.create();
 
-		serverDomain.once('error', (error) => {
+		d.once('error', (error) => {
 			platform.handleException(error);
 			response.end(new Buffer('Invalid data sent. Data must be a valid JSON String with at least a "device" field which corresponds to a registered Device ID.'));
 
-			serverDomain.exit();
+			d.exit();
 		});
 
-		serverDomain.run(() => {
+		d.run(() => {
 			let url        = request.url.split('/')[1],
 				payload    = request.payload.toString(),
 				payloadObj = JSON.parse(request.payload);
 
-			if (isEmpty(payloadObj.device)) {
-				platform.handleException(new Error('Invalid data sent. Data must be a valid JSON String with at least a "device" field which corresponds to a registered Device ID.'));
+			if (url === options.data_url) {
+				if (isEmpty(payloadObj.device)) {
+					platform.handleException(new Error('Invalid data sent. Data must be a valid JSON String with at least a "device" field which corresponds to a registered Device ID.'));
 
-				return serverDomain.exit();
-			}
+					return d.exit();
+				}
 
-			if (isEmpty(authorizedDevices[payloadObj.device])) {
-				platform.log(JSON.stringify({
-					title: 'Unauthorized Device',
-					device: payloadObj.device
-				}));
+				if (isEmpty(authorizedDevices[payloadObj.device])) {
+					platform.log(JSON.stringify({
+						title: 'Unauthorized Device',
+						device: payloadObj.device
+					}));
 
-				response.end(new Buffer('Unauthorized Device.'));
-				return serverDomain.exit();
-			}
+					response.end(new Buffer('Unauthorized Device.'));
+					return d.exit();
+				}
 
-			if (url === options.data_topic) {
 				platform.processData(payloadObj.device, payload);
+
 				platform.log(JSON.stringify({
 					title: 'Data Received.',
 					device: payloadObj.device,
 					data: payload
 				}));
+
 				if (isEmpty(clients[payloadObj.device])) {
 					clients[payloadObj.device] = response;
 				}
 			}
-			else if (url === options.message_topic) {
+			else if (url === options.message_url) {
+				if (isEmpty(payloadObj.target) || isEmpty(payloadObj.message)) {
+					platform.handleException(new Error('Invalid message or command. Message must be a valid JSON String with "target" and "message" fields. "target" is the a registered Device ID. "message" is the payload.'));
+
+					return d.exit();
+				}
+
 				platform.sendMessageToDevice(payloadObj.target, payloadObj.message);
 
 				platform.log(JSON.stringify({
@@ -132,7 +140,13 @@ platform.once('ready', function (options, registeredDevices) {
 
 				response.end(new Buffer('Message sent.'));
 			}
-			else if (url === options.groupmessage_topic) {
+			else if (url === options.groupmessage_url) {
+				if (isEmpty(payloadObj.target) || isEmpty(payloadObj.message)) {
+					platform.handleException(new Error('Invalid message or command. Message must be a valid JSON String with "target" and "message" fields. "target" is the a registered Device ID. "message" is the payload.'));
+
+					return d.exit();
+				}
+
 				platform.sendMessageToGroup(payloadObj.target, payloadObj.message);
 
 				platform.log(JSON.stringify({
@@ -145,14 +159,14 @@ platform.once('ready', function (options, registeredDevices) {
 				response.end(new Buffer('Group message sent.'));
 			}
 			else
-				response.end(new Buffer('Invalid topic.'));
+				response.end(new Buffer('Invalid url.'));
 
-			serverDomain.exit();
+			d.exit();
 		});
 	});
 
 	server.listen(options.port, () => {
-		platform.log('CoAP Gateway initialized on port ' + options.port);
+		platform.log(`CoAP Gateway initialized on port ${options.port}`);
 		platform.notifyReady();
 	});
 });
