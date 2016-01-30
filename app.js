@@ -25,19 +25,19 @@ platform.on('message', function (message) {
 platform.on('adddevice', function (device) {
 	if (!isEmpty(device) && !isEmpty(device._id)) {
 		authorizedDevices[device._id] = device;
-		platform.log('Successfully added ' + device._id + ' to the pool of authorized devices.');
+		platform.log(`Successfully added ${device._id} to the pool of authorized devices.`);
 	}
 	else
-		platform.handleException(new Error('Device data invalid. Device not added. ' + device));
+		platform.handleException(new Error(`Device data invalid. Device not added. ${device}`));
 });
 
 platform.on('removedevice', function (device) {
 	if (!isEmpty(device) && !isEmpty(device._id)) {
 		delete authorizedDevices[device._id];
-		platform.log('Successfully removed ' + device._id + ' from the pool of authorized devices.');
+		platform.log(`Successfully added ${device._id} from the pool of authorized devices.`);
 	}
 	else
-		platform.handleException(new Error('Device data invalid. Device not removed. ' + device));
+		platform.handleException(new Error(`Device data invalid. Device not removed. ${device}`));
 });
 
 platform.once('close', function () {
@@ -89,7 +89,7 @@ platform.once('ready', function (options, registeredDevices) {
 		});
 
 		serverDomain.run(() => {
-			var url        = request.url.split('/')[1],
+			let url        = request.url.split('/')[1],
 				payload    = request.payload.toString(),
 				payloadObj = JSON.parse(request.payload);
 
@@ -106,7 +106,6 @@ platform.once('ready', function (options, registeredDevices) {
 				}));
 
 				response.end(new Buffer('Unauthorized Device.'));
-
 				return serverDomain.exit();
 			}
 
