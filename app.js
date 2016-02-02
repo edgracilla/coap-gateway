@@ -93,34 +93,33 @@ platform.once('ready', function (options, registeredDevices) {
 				payload    = request.payload.toString(),
 				payloadObj = JSON.parse(request.payload);
 
+			if (isEmpty(payloadObj.device)) {
+				platform.handleException(new Error('Invalid data sent. Data must be a valid JSON String with at least a "device" field which corresponds to a registered Device ID.'));
+
+				return d.exit();
+			}
+
+			if (isEmpty(authorizedDevices[payloadObj.device])) {
+				platform.log(JSON.stringify({
+					title: 'CoAP Gateway - Access Denied. Unauthorized Device',
+					device: payloadObj.device
+				}));
+
+				response.end(new Buffer('Access Denied. Unauthorized Device.'));
+				return d.exit();
+			}
+
 			if (url === options.data_url) {
-				if (isEmpty(payloadObj.device)) {
-					platform.handleException(new Error('Invalid data sent. Data must be a valid JSON String with at least a "device" field which corresponds to a registered Device ID.'));
-
-					return d.exit();
-				}
-
-				if (isEmpty(authorizedDevices[payloadObj.device])) {
-					platform.log(JSON.stringify({
-						title: 'Unauthorized Device',
-						device: payloadObj.device
-					}));
-
-					response.end(new Buffer('Unauthorized Device.'));
-					return d.exit();
-				}
-
 				platform.processData(payloadObj.device, payload);
 
 				platform.log(JSON.stringify({
-					title: 'Data Received.',
+					title: 'CoAP Gateway - Data Received.',
 					device: payloadObj.device,
 					data: payload
 				}));
 
-				if (isEmpty(clients[payloadObj.device])) {
+				if (isEmpty(clients[payloadObj.device]))
 					clients[payloadObj.device] = response;
-				}
 			}
 			else if (url === options.message_url) {
 				if (isEmpty(payloadObj.target) || isEmpty(payloadObj.message)) {
@@ -132,7 +131,7 @@ platform.once('ready', function (options, registeredDevices) {
 				platform.sendMessageToDevice(payloadObj.target, payloadObj.message);
 
 				platform.log(JSON.stringify({
-					title: 'Message Sent.',
+					title: 'CoAP Gateway - Message Sent.',
 					source: payloadObj.device,
 					target: payloadObj.target,
 					message: payloadObj.message
@@ -150,7 +149,7 @@ platform.once('ready', function (options, registeredDevices) {
 				platform.sendMessageToGroup(payloadObj.target, payloadObj.message);
 
 				platform.log(JSON.stringify({
-					title: 'Group Message Sent.',
+					title: 'CoAP Gateway - Group Message Sent.',
 					source: payloadObj.device,
 					target: payloadObj.target,
 					message: payloadObj.message
@@ -158,8 +157,10 @@ platform.once('ready', function (options, registeredDevices) {
 
 				response.end(new Buffer('Group message sent.'));
 			}
-			else
+			else {
+				platform.handleException(new Error(`Invalid url specified. URL: ${url}`));
 				response.end(new Buffer('Invalid url.'));
+			}
 
 			d.exit();
 		});
