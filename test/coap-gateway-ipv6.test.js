@@ -57,28 +57,4 @@ describe('IPV6 Gateway', function () {
 			});
 		});
 	});
-
-	describe('#message', function () {
-		it('it should route the data to the target device', function (done) {
-			this.timeout(5000);
-
-			var req = coap.request(`coap://localhost:${PORT}/coapTestData`);
-			req.on('response', function (res) {
-				assert.equal(res.payload.toString('utf8'), 'TURNOFF');
-				done();
-			});
-			req.end(new Buffer(JSON.stringify({device: '567827489028376', data: 'test data'})));
-
-			setTimeout(function () {
-				gateway.send({
-					type: 'message',
-					data: {
-						client: '567827489028376',
-						messageId: '55fce1455167c470abeedae2',
-						message: 'TURNOFF'
-					}
-				});
-			}, 2000);
-		});
-	});
 });
