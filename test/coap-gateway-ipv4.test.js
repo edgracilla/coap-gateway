@@ -9,10 +9,10 @@ var cp     = require('child_process'),
 	coap   = require('coap'),
 	gateway;
 
-describe('Gateway', function () {
+describe('IPV4 Gateway', function () {
 	this.slow(5000);
 
-	after('terminate child process', function () {
+	after('terminate child process', function (done) {
 		this.timeout(5000);
 
 		gateway.send({
@@ -21,7 +21,8 @@ describe('Gateway', function () {
 
 		setTimeout(function () {
 			gateway.kill('SIGKILL');
-		}, 4500);
+			done();
+		}, 4000);
 	});
 
 	describe('#spawn', function () {
@@ -45,10 +46,9 @@ describe('Gateway', function () {
 					options: {
 						port: PORT,
 						socket_type: 'udp4',
-						data_topic: 'coapTestData',
-						message_topic: 'coapTestMessage',
-						groupmessage_topic: 'CoapTestGroupMessage',
-						authorized_topics: 'coapTestData,coapTestMessage,CoapTestGroupMessage'
+						data_url: 'coapTestData',
+						message_url: 'coapTestMessage',
+						groupmessage_url: 'CoapTestGroupMessage'
 					},
 					devices: [{_id: DEVICE_ID1}, {_id: DEVICE_ID2}]
 				}
@@ -59,10 +59,10 @@ describe('Gateway', function () {
 	});
 
 	describe('#message', function () {
-		it('it should process the data', function (done) {
+		it('it should route the data to the target device', function (done) {
 			this.timeout(5000);
 
-			var req = coap.request('coap://localhost:8080/coapTestData');
+			var req = coap.request(`coap://localhost:${PORT}/coapTestData`);
 			req.on('response', function (res) {
 				assert.equal(res.payload.toString('utf8'), 'TURNOFF');
 				done();

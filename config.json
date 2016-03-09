@@ -6,22 +6,22 @@
     "help": "(Optional) The UDP Socket type. Default: udp4",
     "default": "udp4"
   },
-  "data_topic": {
+  "data_url": {
     "type": "String",
-    "label": "Data Topic",
+    "label": "Data URL",
     "default": "reekoh/data",
-    "help": "The topic to listen to for device data. Default: reekoh/data"
+    "help": "(Optional) The url to listen to for device data. Default: reekoh/data"
   },
-  "message_topic": {
+  "message_url": {
     "type": "String",
-    "label": "Message Topic",
+    "label": "Message URL",
     "default": "reekoh/messages",
-    "help": "The topic to listen to for device messages or commands. Default: reekoh/messages"
+    "help": "(Optional) The url to listen to for device messages or commands. Default: reekoh/messages"
   },
-  "groupmessage_topic": {
+  "groupmessage_url": {
     "type": "String",
-    "label": "Group Message Topic",
+    "label": "Group Message URL",
     "default": "reekoh/groupmessages",
-    "help": "The topic to listen to for group messages or commands. Default: reekoh/groupmessages"
+    "help": "(Optional) The url to listen to for group messages or commands. Default: reekoh/groupmessages"
   }
 }
