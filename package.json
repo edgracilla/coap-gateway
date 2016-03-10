@@ -12,7 +12,7 @@
     "url": "https://github.com/Reekoh/coap-gateway"
   },
   "dependencies": {
-    "coap": "^0.13.0",
+    "coap": "^0.13.1",
     "lodash.isempty": "^4.0.0",
     "lodash.keyby": "^4.0.1"
   },
