@@ -6,22 +6,6 @@ var platform          = require('./platform'),
 	authorizedDevices = {},
 	server;
 
-platform.on('message', function (message) {
-	if (clients[message.client]) {
-		let client = clients[message.client];
-
-		client.end(new Buffer(message.message));
-
-		platform.sendMessageResponse(message.messageId, 'Message Sent');
-		platform.log(JSON.stringify({
-			title: 'Message Sent',
-			device: message.device,
-			messageId: message.messageId,
-			message: message.message
-		}));
-	}
-});
-
 platform.on('adddevice', function (device) {
 	if (!isEmpty(device) && !isEmpty(device._id)) {
 		authorizedDevices[device._id] = device;
@@ -83,8 +67,6 @@ platform.once('ready', function (options, registeredDevices) {
 
 		d.once('error', (error) => {
 			platform.handleException(error);
-			response.end(new Buffer('Invalid data sent. Data must be a valid JSON String with at least a "device" field which corresponds to a registered Device ID.'));
-
 			d.exit();
 		});
 
@@ -105,7 +87,6 @@ platform.once('ready', function (options, registeredDevices) {
 					device: payloadObj.device
 				}));
 
-				response.end(new Buffer('Access Denied. Unauthorized Device.'));
 				return d.exit();
 			}
 
@@ -136,8 +117,6 @@ platform.once('ready', function (options, registeredDevices) {
 					target: payloadObj.target,
 					message: payloadObj.message
 				}));
-
-				response.end(new Buffer('Message sent.'));
 			}
 			else if (url === options.groupmessage_url) {
 				if (isEmpty(payloadObj.target) || isEmpty(payloadObj.message)) {
@@ -154,12 +133,9 @@ platform.once('ready', function (options, registeredDevices) {
 					target: payloadObj.target,
 					message: payloadObj.message
 				}));
-
-				response.end(new Buffer('Group message sent.'));
 			}
 			else {
 				platform.handleException(new Error(`Invalid url specified. URL: ${url}`));
-				response.end(new Buffer('Invalid url.'));
 			}
 
 			d.exit();
