@@ -60,7 +60,7 @@ platform.once('ready', function (options, registeredDevices) {
 	if (isEmpty(options.groupmessage_url))
 		options.groupmessage_url = config.groupmessage_url.default;
 
-	server = coap.createServer({type: options.socket_type});
+	server = coap.createServer();
 
 	server.on('request', (request, response) => {
 		let d = domain.create();
