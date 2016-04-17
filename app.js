@@ -44,8 +44,7 @@ platform.once('close', function () {
 });
 
 platform.once('ready', function (options, registeredDevices) {
-	let domain = require('domain'),
-		keyBy  = require('lodash.keyby'),
+	let keyBy  = require('lodash.keyby'),
 		config = require('./config.json'),
 		coap   = require('coap');
 
