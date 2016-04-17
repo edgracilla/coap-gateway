@@ -1,6 +1,7 @@
 'use strict';
 
-var platform          = require('./platform'),
+var async             = require('async'),
+	platform          = require('./platform'),
 	isEmpty           = require('lodash.isempty'),
 	clients           = {},
 	authorizedDevices = {},
@@ -63,32 +64,22 @@ platform.once('ready', function (options, registeredDevices) {
 	server = coap.createServer();
 
 	server.on('request', (request, response) => {
-		let d = domain.create();
+		let payload = request.payload.toString();
 
-		d.once('error', function (error) {
-			platform.handleException(error);
-			d.exit();
-		});
-
-		d.run(function () {
-			let url        = request.url.split('/')[1],
-				payload    = request.payload.toString(),
-				payloadObj = JSON.parse(request.payload);
-
-			if (isEmpty(payloadObj.device)) {
-				platform.handleException(new Error('Invalid data sent. Data must be a valid JSON String with at least a "device" field which corresponds to a registered Device ID.'));
-
-				return d.exit();
-			}
+		async.waterfall([
+			async.constant(payload),
+			async.asyncify(JSON.parse)
+		], (error, payloadObj) => {
+			if (error || isEmpty(payloadObj.device)) return platform.handleException(new Error('Invalid data sent. Data must be a valid JSON String with at least a "device" field which corresponds to a registered Device ID.'));
 
 			if (isEmpty(authorizedDevices[payloadObj.device])) {
 				platform.log(JSON.stringify({
 					title: 'CoAP Gateway - Access Denied. Unauthorized Device',
 					device: payloadObj.device
 				}));
-
-				return d.exit();
 			}
+
+			let url = request.url.split('/')[1];
 
 			if (url === options.data_url) {
 				platform.processData(payloadObj.device, payload);
@@ -103,11 +94,7 @@ platform.once('ready', function (options, registeredDevices) {
 					clients[payloadObj.device] = response;
 			}
 			else if (url === options.message_url) {
-				if (isEmpty(payloadObj.target) || isEmpty(payloadObj.message)) {
-					platform.handleException(new Error('Invalid message or command. Message must be a valid JSON String with "target" and "message" fields. "target" is the a registered Device ID. "message" is the payload.'));
-
-					return d.exit();
-				}
+				if (isEmpty(payloadObj.target) || isEmpty(payloadObj.message)) return platform.handleException(new Error('Invalid message or command. Message must be a valid JSON String with "target" and "message" fields. "target" is a registered Device ID. "message" is the payload.'));
 
 				platform.sendMessageToDevice(payloadObj.target, payloadObj.message);
 
@@ -119,11 +106,7 @@ platform.once('ready', function (options, registeredDevices) {
 				}));
 			}
 			else if (url === options.groupmessage_url) {
-				if (isEmpty(payloadObj.target) || isEmpty(payloadObj.message)) {
-					platform.handleException(new Error('Invalid message or command. Message must be a valid JSON String with "target" and "message" fields. "target" is the a registered Device ID. "message" is the payload.'));
-
-					return d.exit();
-				}
+				if (isEmpty(payloadObj.target) || isEmpty(payloadObj.message)) return platform.handleException(new Error('Invalid group message or command. Group messages must be a valid JSON String with "target" and "message" fields. "target" is a device group id or name. "message" is the payload.'));
 
 				platform.sendMessageToGroup(payloadObj.target, payloadObj.message);
 
@@ -134,11 +117,8 @@ platform.once('ready', function (options, registeredDevices) {
 					message: payloadObj.message
 				}));
 			}
-			else {
+			else
 				platform.handleException(new Error(`Invalid url specified. URL: ${url}`));
-			}
-
-			d.exit();
 		});
 	});
 
