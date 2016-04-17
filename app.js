@@ -86,7 +86,7 @@ platform.once('ready', function (options, registeredDevices) {
 				platform.log(JSON.stringify({
 					title: 'CoAP Gateway - Data Received.',
 					device: payloadObj.device,
-					data: payload
+					data: payloadObj
 				}));
 
 				if (isEmpty(clients[payloadObj.device]))
