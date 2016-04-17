@@ -27,14 +27,14 @@ platform.on('removedevice', function (device) {
 platform.once('close', function () {
 	let d = require('domain').create();
 
-	d.once('error', (error) => {
+	d.once('error', function (error) {
 		console.error(error);
 		platform.handleException(error);
 		platform.notifyClose();
 		d.exit();
 	});
 
-	d.run(() => {
+	d.run(function () {
 		server.close(() => {
 			platform.notifyClose();
 			d.exit();
@@ -65,12 +65,12 @@ platform.once('ready', function (options, registeredDevices) {
 	server.on('request', (request, response) => {
 		let d = domain.create();
 
-		d.once('error', (error) => {
+		d.once('error', function (error) {
 			platform.handleException(error);
 			d.exit();
 		});
 
-		d.run(() => {
+		d.run(function () {
 			let url        = request.url.split('/')[1],
 				payload    = request.payload.toString(),
 				payloadObj = JSON.parse(request.payload);
