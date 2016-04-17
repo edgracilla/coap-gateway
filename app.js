@@ -84,7 +84,7 @@ platform.once('ready', function (options, registeredDevices) {
 				platform.processData(payloadObj.device, payload);
 
 				platform.log(JSON.stringify({
-					title: 'CoAP Gateway - Data Received.',
+					title: 'CoAP Gateway - Data Received',
 					device: payloadObj.device,
 					data: payloadObj
 				}));
@@ -98,7 +98,7 @@ platform.once('ready', function (options, registeredDevices) {
 				platform.sendMessageToDevice(payloadObj.target, payloadObj.message);
 
 				platform.log(JSON.stringify({
-					title: 'CoAP Gateway - Message Sent.',
+					title: 'CoAP Gateway - Message Received',
 					source: payloadObj.device,
 					target: payloadObj.target,
 					message: payloadObj.message
@@ -110,7 +110,7 @@ platform.once('ready', function (options, registeredDevices) {
 				platform.sendMessageToGroup(payloadObj.target, payloadObj.message);
 
 				platform.log(JSON.stringify({
-					title: 'CoAP Gateway - Group Message Sent.',
+					title: 'CoAP Gateway - Group Message Received',
 					source: payloadObj.device,
 					target: payloadObj.target,
 					message: payloadObj.message
