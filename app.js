@@ -66,7 +66,7 @@ platform.once('ready', function (options, registeredDevices) {
 		let payload = request.payload.toString();
 
 		async.waterfall([
-			async.constant(payload),
+			async.constant(payload || '{}'),
 			async.asyncify(JSON.parse)
 		], (error, payloadObj) => {
 			if (error || isEmpty(payloadObj.device)) return platform.handleException(new Error('Invalid data sent. Data must be a valid JSON String with at least a "device" field which corresponds to a registered Device ID.'));
