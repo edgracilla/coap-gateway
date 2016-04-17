@@ -73,7 +73,7 @@ platform.once('ready', function (options, registeredDevices) {
 			if (error || isEmpty(payloadObj.device)) return platform.handleException(new Error('Invalid data sent. Data must be a valid JSON String with at least a "device" field which corresponds to a registered Device ID.'));
 
 			if (isEmpty(authorizedDevices[payloadObj.device])) {
-				platform.log(JSON.stringify({
+				return platform.log(JSON.stringify({
 					title: 'CoAP Gateway - Access Denied. Unauthorized Device',
 					device: payloadObj.device
 				}));
