@@ -1,8 +1,6 @@
 'use strict';
 
-const PORT       = 8080,
-	  DEVICE_ID1 = '567827489028375',
-	  DEVICE_ID2 = '567827489028376';
+const PORT = 8080;
 
 var cp     = require('child_process'),
 	assert = require('assert'),
@@ -49,8 +47,7 @@ describe('IPV4 Gateway', function () {
 						data_url: 'coapTestData',
 						message_url: 'coapTestMessage',
 						groupmessage_url: 'CoapTestGroupMessage'
-					},
-					devices: [{_id: DEVICE_ID1}, {_id: DEVICE_ID2}]
+					}
 				}
 			}, function (error) {
 				assert.ifError(error);
