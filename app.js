@@ -3,7 +3,6 @@
 var async    = require('async'),
 	platform = require('./platform'),
 	isEmpty  = require('lodash.isempty'),
-	clients  = {},
 	server;
 
 platform.once('close', function () {
@@ -25,8 +24,7 @@ platform.once('close', function () {
 });
 
 platform.once('ready', function (options) {
-	let keyBy  = require('lodash.keyby'),
-		config = require('./config.json'),
+	let config = require('./config.json'),
 		coap   = require('coap');
 
 	if (isEmpty(options.data_url))
@@ -72,9 +70,6 @@ platform.once('ready', function (options) {
 							device: payloadObj.device,
 							data: payloadObj
 						}));
-
-						if (isEmpty(clients[payloadObj.device]))
-							clients[payloadObj.device] = response;
 					}
 					else if (url === options.message_url) {
 						if (isEmpty(payloadObj.target) || isEmpty(payloadObj.message)) return platform.handleException(new Error('Invalid message or command. Message must be a valid JSON String with "target" and "message" fields. "target" is a registered Device ID. "message" is the payload.'));
