@@ -53,7 +53,7 @@ platform.once('ready', function (options) {
 			}
 
 			platform.requestDeviceInfo(payloadObj.device, (error, requestId) => {
-				setTimeout(() => {
+				let t = setTimeout(() => {
 					response.code = '4.01';
 					response.end('Device not registered.\n');
 
@@ -61,6 +61,8 @@ platform.once('ready', function (options) {
 				}, 5000);
 
 				platform.once(requestId, (deviceInfo) => {
+					clearTimeout(t);
+
 					if (isEmpty(deviceInfo)) {
 						response.code = '4.01';
 						response.end('Device not registered.\n');
