@@ -88,7 +88,7 @@ platform.once('ready', function (options) {
 
 					let url = request.url.split('/')[1];
 
-					if (url === options.data_url) {
+					if (url === options.data_url && request.method === 'POST') {
 						platform.processData(payloadObj.device, payload);
 
 						response.code = '2.05';
@@ -100,7 +100,7 @@ platform.once('ready', function (options) {
 							data: payloadObj
 						}));
 					}
-					else if (url === options.message_url) {
+					else if (url === options.message_url && request.method === 'POST') {
 						if (isEmpty(payloadObj.target) || isEmpty(payloadObj.message)) return platform.handleException(new Error('Invalid message or command. Message must be a valid JSON String with "target" and "message" fields. "target" is a registered Device ID. "message" is the payload.'));
 
 						platform.sendMessageToDevice(payloadObj.target, payloadObj.message);
@@ -115,7 +115,7 @@ platform.once('ready', function (options) {
 							message: payloadObj.message
 						}));
 					}
-					else if (url === options.groupmessage_url) {
+					else if (url === options.groupmessage_url && request.method === 'POST') {
 						if (isEmpty(payloadObj.target) || isEmpty(payloadObj.message)) return platform.handleException(new Error('Invalid group message or command. Group messages must be a valid JSON String with "target" and "message" fields. "target" is a device group id or name. "message" is the payload.'));
 
 						platform.sendMessageToGroup(payloadObj.target, payloadObj.message);
@@ -132,7 +132,7 @@ platform.once('ready', function (options) {
 					}
 					else {
 						response.code = '4.04';
-						response.end('Endpoint not found');
+						response.end('Path not found. Kindly check your request path and method.');
 						platform.handleException(new Error(`Invalid url specified. URL: ${url}`));
 					}
 				});
