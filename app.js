@@ -38,6 +38,19 @@ platform.once('ready', function (options) {
 
 	server = coap.createServer();
 
+	server.on('error', function (error) {
+		console.error('Server Error', error);
+		platform.handleException(error);
+
+		setTimeout(() => {
+			process.exit(1);
+		}, 5000);
+	});
+
+	server.once('close', function () {
+		console.log(`CoAP Gateway closed on port ${options.port}`);
+	});
+
 	server.on('request', (request, response) => {
 		let payload = request.payload.toString();
 
@@ -47,7 +60,7 @@ platform.once('ready', function (options) {
 		], (error, payloadObj) => {
 			if (error || isEmpty(payloadObj.device)) {
 				response.code = '4.00';
-				response.end('Invalid data sent. Data must be a valid JSON String with at least a "device" field which corresponds to a registered Device ID.\n');
+				response.end('Invalid data sent. Data must be a valid JSON String with at least a "device" field which corresponds to a registered Device ID.');
 
 				return platform.handleException(new Error('Invalid data sent. Data must be a valid JSON String with at least a "device" field which corresponds to a registered Device ID.'));
 			}
@@ -55,7 +68,7 @@ platform.once('ready', function (options) {
 			platform.requestDeviceInfo(payloadObj.device, (error, requestId) => {
 				let t = setTimeout(() => {
 					response.code = '4.01';
-					response.end('Device not registered.\n');
+					response.end('Device not registered');
 
 					platform.removeAllListeners(requestId);
 				}, 5000);
@@ -65,7 +78,7 @@ platform.once('ready', function (options) {
 
 					if (isEmpty(deviceInfo)) {
 						response.code = '4.01';
-						response.end('Device not registered.\n');
+						response.end('Device not registered.');
 
 						return platform.log(JSON.stringify({
 							title: 'CoAP Gateway - Access Denied. Device not registered.',
@@ -79,7 +92,7 @@ platform.once('ready', function (options) {
 						platform.processData(payloadObj.device, payload);
 
 						response.code = '2.05';
-						response.end('Data Received\n');
+						response.end('Data Received');
 
 						platform.log(JSON.stringify({
 							title: 'CoAP Gateway - Data Received',
@@ -93,7 +106,7 @@ platform.once('ready', function (options) {
 						platform.sendMessageToDevice(payloadObj.target, payloadObj.message);
 
 						response.code = '2.05';
-						response.end('Message Received\n');
+						response.end('Message Received');
 
 						platform.log(JSON.stringify({
 							title: 'CoAP Gateway - Message Received',
@@ -108,7 +121,7 @@ platform.once('ready', function (options) {
 						platform.sendMessageToGroup(payloadObj.target, payloadObj.message);
 
 						response.code = '2.05';
-						response.end('Group Message Received\n');
+						response.end('Group Message Received');
 
 						platform.log(JSON.stringify({
 							title: 'CoAP Gateway - Group Message Received',
@@ -119,7 +132,7 @@ platform.once('ready', function (options) {
 					}
 					else {
 						response.code = '4.04';
-						response.end('Endpoint not found.\n');
+						response.end('Endpoint not found');
 						platform.handleException(new Error(`Invalid url specified. URL: ${url}`));
 					}
 				});
