@@ -88,7 +88,7 @@ describe('CoAP Gateway', function () {
 			req.write(JSON.stringify(payload));
 			req.on('response', (res) => {
 				assert.equal('2.05', res.code);
-				assert.equal('Data Received\n', res.payload.toString());
+				assert.equal('Data Received', res.payload.toString());
 				done();
 			});
 			req.end();
@@ -113,7 +113,7 @@ describe('CoAP Gateway', function () {
 			req.write(JSON.stringify(payload));
 			req.on('response', (res) => {
 				assert.equal('2.05', res.code);
-				assert.equal('Message Received\n', res.payload.toString());
+				assert.equal('Message Received', res.payload.toString());
 				done();
 			});
 			req.end();
@@ -138,7 +138,7 @@ describe('CoAP Gateway', function () {
 			req.write(JSON.stringify(payload));
 			req.on('response', (res) => {
 				assert.equal('2.05', res.code);
-				assert.equal('Group Message Received\n', res.payload.toString());
+				assert.equal('Group Message Received', res.payload.toString());
 				done();
 			});
 			req.end();
@@ -161,7 +161,7 @@ describe('CoAP Gateway', function () {
 			req.write(JSON.stringify(payload));
 			req.on('response', (res) => {
 				assert.equal('2.05', res.code);
-				assert.equal('Group Message Received\n', res.payload.toString());
+				assert.equal('Group Message Received', res.payload.toString());
 				done();
 			});
 			req.end();
