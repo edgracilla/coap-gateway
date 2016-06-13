@@ -54,4 +54,82 @@ describe('IPV4 Gateway', function () {
 			});
 		});
 	});
+
+	describe('#data', function () {
+		it('should process the data', function (done) {
+			this.timeout(5000);
+
+			let req = coap.request({
+				port: PORT,
+				pathname: DATA_PATH,
+				method: METHOD,
+			}),
+			payload = {
+				device: 'fb4ef414-ff3e-4635-86ff-62079dcf3fed', 
+				message: 'Test data',
+				target: 'Data target'
+			},
+			payloadStr = JSON.stringify(payload);
+			
+			req.write(payloadStr);
+			req.on('response', (res) => {
+				assert.equal(200, res.code);
+				assert.equal('Data Received', res.payload.toString());
+				done();
+			});
+			req.end();
+		});
+	});
+
+	describe('#message', function () {
+		it('should send the message', function (done) {
+			this.timeout(5000);
+
+			let req = coap.request({
+				port: PORT,
+				pathname: MESSAGE_PATH,
+				method: METHOD,
+			}),
+			payload = {
+				device: 'fb4ef414-ff3e-4635-86ff-62079dcf3fed', 
+				message: 'Test message',
+				target: 'Message target'
+			},
+			payloadStr = JSON.stringify(payload);
+			
+			req.write(payloadStr);
+			req.on('response', (res) => {
+				assert.equal(200, res.code);
+				assert.equal('Message Received', res.payload.toString());
+				done();
+			});
+			req.end();
+		});
+	});
+
+	describe('#groupmessage', function () {
+		it('should send the group message', function (done) {
+			this.timeout(5000);
+
+			let req = coap.request({
+				port: PORT,
+				pathname: GROUPMESSAGE_PATH,
+				method: METHOD,
+			}),
+			payload = {
+				device: 'fb4ef414-ff3e-4635-86ff-62079dcf3fed', 
+				message: 'Test Group Message',
+				target: 'Group message target'
+			},
+			payloadStr = JSON.stringify(payload);
+			
+			req.write(payloadStr);
+			req.on('response', (res) => {
+				assert.equal(200, res.code);
+				assert.equal('Group Message Received', res.payload.toString());
+				done();
+			});
+			req.end();
+		});
+	});
 });
