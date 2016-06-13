@@ -38,6 +38,19 @@ platform.once('ready', function (options) {
 
 	server = coap.createServer();
 
+	server.on('error', function (error) {
+		console.error('Server Error', error);
+		platform.handleException(error);
+
+		setTimeout(() => {
+			process.exit(1);
+		}, 5000);
+	});
+
+	server.once('close', function () {
+		console.log(`CoAP Gateway closed on port ${options.port}`);
+	});
+
 	server.on('request', (request, response) => {
 		let payload = request.payload.toString();
 
