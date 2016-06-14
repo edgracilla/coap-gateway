@@ -2,9 +2,9 @@
 
 const PORT              = 8080,
 	  METHOD            = 'POST',
-	  DATA_PATH         = 'coaptestdatapath',
+	  DATA_PATH         = 'test/coaptestdatapath',
 	  MESSAGE_PATH      = 'coaptestmessagepath',
-	  GROUPMESSAGE_PATH = 'coaptestgroupmessagepath',
+	  GROUPMESSAGE_PATH = 'reekoh/coaptestgroupmessagepath',
 	  DEVICE_ID1        = '567827489028375',
 	  DEVICE_ID2        = '567827489028376';
 

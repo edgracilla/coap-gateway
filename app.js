@@ -29,12 +29,18 @@ platform.once('ready', function (options) {
 
 	if (isEmpty(options.data_url))
 		options.data_url = config.data_url.default;
+	else if (!options.data_url.startsWith('/'))
+		options.data_url = `/${options.data_url}`;
 
 	if (isEmpty(options.message_url))
 		options.message_url = config.message_url.default;
+	else if (!options.message_url.startsWith('/'))
+		options.message_url = `/${options.message_url}`;
 
 	if (isEmpty(options.groupmessage_url))
 		options.groupmessage_url = config.groupmessage_url.default;
+	else if (!options.groupmessage_url.startsWith('/'))
+		options.groupmessage_url = `/${options.groupmessage_url}`;
 
 	server = coap.createServer();
 
@@ -86,7 +92,7 @@ platform.once('ready', function (options) {
 						}));
 					}
 
-					let url = request.url.split('/')[1];
+					let url = `${request.url}`.substr(`${request.url}`.indexOf('/'));
 
 					if (url === options.data_url && request.method === 'POST') {
 						platform.processData(payloadObj.device, payload);
