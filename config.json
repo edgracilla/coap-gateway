@@ -2,19 +2,19 @@
   "data_url": {
     "type": "String",
     "label": "Data URL",
-    "default": "reekoh/data",
-    "help": "(Optional) The url to listen to for device data. Default: reekoh/data"
+    "default": "/reekoh/data",
+    "help": "(Optional) The url to listen to for device data. Default: /reekoh/data"
   },
   "message_url": {
     "type": "String",
     "label": "Message URL",
-    "default": "reekoh/messages",
-    "help": "(Optional) The url to listen to for device messages or commands. Default: reekoh/messages"
+    "default": "/reekoh/messages",
+    "help": "(Optional) The url to listen to for device messages or commands. Default: /reekoh/messages"
   },
   "groupmessage_url": {
     "type": "String",
     "label": "Group Message URL",
-    "default": "reekoh/groupmessages",
-    "help": "(Optional) The url to listen to for group messages or commands. Default: reekoh/groupmessages"
+    "default": "/reekoh/groupmessages",
+    "help": "(Optional) The url to listen to for group messages or commands. Default: /reekoh/groupmessages"
   }
 }
