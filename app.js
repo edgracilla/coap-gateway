@@ -75,9 +75,7 @@ platform.once('ready', function (options) {
 				let t = setTimeout(() => {
 					response.code = '4.01';
 					response.end('Device not registered');
-
-					platform.removeAllListeners(requestId);
-				}, 5000);
+				}, 10000);
 
 				platform.once(requestId, (deviceInfo) => {
 					clearTimeout(t);
