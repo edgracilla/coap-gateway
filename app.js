@@ -17,6 +17,7 @@ platform.once('close', function () {
 
 	d.run(function () {
 		server.close(() => {
+			server.removeAllListeners();
 			platform.notifyClose();
 			d.exit();
 		});
@@ -44,17 +45,20 @@ platform.once('ready', function (options) {
 
 	server = coap.createServer();
 
-	server.on('error', function (error) {
-		console.error('Server Error', error);
+	server.once('error', function (error) {
+		console.error('CoAP Gateway Error', error);
 		platform.handleException(error);
 
 		setTimeout(() => {
-			process.exit(1);
+			server.close(() => {
+				server.removeAllListeners();
+				process.exit();
+			});
 		}, 5000);
 	});
 
 	server.once('close', function () {
-		console.log(`CoAP Gateway closed on port ${options.port}`);
+		platform.log(`CoAP Gateway closed on port ${options.port}`);
 	});
 
 	server.on('request', (request, response) => {
