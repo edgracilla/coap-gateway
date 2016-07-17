@@ -17,6 +17,7 @@ platform.once('close', function () {
 
 	d.run(function () {
 		server.close(() => {
+			server.removeAllListeners();
 			platform.notifyClose();
 			d.exit();
 		});
@@ -44,17 +45,20 @@ platform.once('ready', function (options) {
 
 	server = coap.createServer();
 
-	server.on('error', function (error) {
-		console.error('Server Error', error);
+	server.once('error', function (error) {
+		console.error('CoAP Gateway Error', error);
 		platform.handleException(error);
 
 		setTimeout(() => {
-			process.exit(1);
+			server.close(() => {
+				server.removeAllListeners();
+				process.exit();
+			});
 		}, 5000);
 	});
 
 	server.once('close', function () {
-		console.log(`CoAP Gateway closed on port ${options.port}`);
+		platform.log(`CoAP Gateway closed on port ${options.port}`);
 	});
 
 	server.on('request', (request, response) => {
@@ -66,7 +70,7 @@ platform.once('ready', function (options) {
 		], (error, payloadObj) => {
 			if (error || isEmpty(payloadObj.device)) {
 				response.code = '4.00';
-				response.end('Invalid data sent. Data must be a valid JSON String with at least a "device" field which corresponds to a registered Device ID.');
+				response.end('Invalid data sent. Data must be a valid JSON String with at least a "device" field which corresponds to a registered Device ID.\n');
 
 				return platform.handleException(new Error('Invalid data sent. Data must be a valid JSON String with at least a "device" field which corresponds to a registered Device ID.'));
 			}
@@ -74,17 +78,15 @@ platform.once('ready', function (options) {
 			platform.requestDeviceInfo(payloadObj.device, (error, requestId) => {
 				let t = setTimeout(() => {
 					response.code = '4.01';
-					response.end('Device not registered');
-
-					platform.removeAllListeners(requestId);
-				}, 5000);
+					response.end(`Device not registered. Device ID: ${payloadObj.device}\n`);
+				}, 10000);
 
 				platform.once(requestId, (deviceInfo) => {
 					clearTimeout(t);
 
 					if (isEmpty(deviceInfo)) {
 						response.code = '4.01';
-						response.end('Device not registered.');
+						response.end(`Device not registered. Device ID: ${payloadObj.device}\n`);
 
 						return platform.log(JSON.stringify({
 							title: 'CoAP Gateway - Access Denied. Device not registered.',
@@ -98,7 +100,7 @@ platform.once('ready', function (options) {
 						platform.processData(payloadObj.device, payload);
 
 						response.code = '2.05';
-						response.end('Data Received');
+						response.end(`Data Received. Device ID: ${payloadObj.device}. Data: ${payload}\n`);
 
 						platform.log(JSON.stringify({
 							title: 'CoAP Gateway - Data Received',
@@ -112,7 +114,7 @@ platform.once('ready', function (options) {
 						platform.sendMessageToDevice(payloadObj.target, payloadObj.message);
 
 						response.code = '2.05';
-						response.end('Message Received');
+						response.end(`Message Received. Device ID: ${payloadObj.device}. Message: ${payload}\n`);
 
 						platform.log(JSON.stringify({
 							title: 'CoAP Gateway - Message Received',
@@ -127,7 +129,7 @@ platform.once('ready', function (options) {
 						platform.sendMessageToGroup(payloadObj.target, payloadObj.message);
 
 						response.code = '2.05';
-						response.end('Group Message Received');
+						response.end(`Group Message Received. Device ID: ${payloadObj.device}. Message: ${payload}\n`);
 
 						platform.log(JSON.stringify({
 							title: 'CoAP Gateway - Group Message Received',
@@ -138,7 +140,7 @@ platform.once('ready', function (options) {
 					}
 					else {
 						response.code = '4.04';
-						response.end('Path not found. Kindly check your request path and method.');
+						response.end(`Path not found. Kindly check your request path and method. URL: ${request.url}\n`);
 						platform.handleException(new Error(`Invalid url specified. URL: ${url}`));
 					}
 				});

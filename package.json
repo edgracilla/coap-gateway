@@ -1,7 +1,7 @@
 {
   "name": "coap-gateway",
   "description": "CoAP Gateway Plugin for the Reekoh IoT Platform.",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "author": "Reekoh, Inc.",
   "main": "app.js",
   "scripts": {
@@ -13,12 +13,12 @@
   },
   "dependencies": {
 	"async": "^1.5.2",
-	"coap": "^0.16.0",
+	"coap": "^0.17.0",
 	"lodash.isempty": "^4.2.1"
   },
   "devDependencies": {
 	"gulp": "^3.9.1",
-	"gulp-cli": "^1.2.1",
+	"gulp-cli": "^1.2.2",
 	"gulp-jshint": "^2.0.1",
 	"gulp-json-lint": "^0.1.0",
 	"gulp-mocha": "^2.2.0",
