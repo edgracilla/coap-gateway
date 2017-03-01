@@ -1,155 +1,122 @@
-'use strict';
+'use strict'
 
-var async    = require('async'),
-	platform = require('./platform'),
-	isEmpty  = require('lodash.isempty'),
-	server;
+const reekoh = require('reekoh')
+const plugin = new reekoh.plugins.Gateway()
 
-platform.once('close', function () {
-	let d = require('domain').create();
+const async = require('async')
+const isEmpty = require('lodash.isempty')
 
-	d.once('error', function (error) {
-		console.error(error);
-		platform.handleException(error);
-		platform.notifyClose();
-		d.exit();
-	});
+let server = null
 
-	d.run(function () {
-		server.close(() => {
-			server.removeAllListeners();
-			platform.notifyClose();
-			d.exit();
-		});
-	});
-});
+plugin.once('ready', () => {
+  let config = require('./config.json')
+  let options = plugin.config
+  let coap = require('coap')
 
-platform.once('ready', function (options) {
-	let config = require('./config.json'),
-		coap   = require('coap');
+  if (isEmpty(options.dataUrl)) {
+    options.dataUrl = config.dataUrl.default
+  } else if (!options.dataUrl.startsWith('/')) {
+    options.dataUrl = `/${options.dataUrl}`
+  }
 
-	if (isEmpty(options.data_url))
-		options.data_url = config.data_url.default;
-	else if (!options.data_url.startsWith('/'))
-		options.data_url = `/${options.data_url}`;
+  if (isEmpty(options.commandUrl)) {
+    options.commandUrl = config.commandUrl.default
+  } else if (!options.commandUrl.startsWith('/')) {
+    options.commandUrl = `/${options.commandUrl}`
+  }
 
-	if (isEmpty(options.message_url))
-		options.message_url = config.message_url.default;
-	else if (!options.message_url.startsWith('/'))
-		options.message_url = `/${options.message_url}`;
+  server = coap.createServer()
 
-	if (isEmpty(options.groupmessage_url))
-		options.groupmessage_url = config.groupmessage_url.default;
-	else if (!options.groupmessage_url.startsWith('/'))
-		options.groupmessage_url = `/${options.groupmessage_url}`;
+  server.once('error', function (error) {
+    console.error('CoAP Gateway Error', error)
+    plugin.logException(error)
 
-	server = coap.createServer();
+    setTimeout(() => {
+      server.close(() => {
+        server.removeAllListeners()
+        process.exit()
+      })
+    }, 5000)
+  })
 
-	server.once('error', function (error) {
-		console.error('CoAP Gateway Error', error);
-		platform.handleException(error);
+  server.once('close', function () {
+    plugin.log(`CoAP Gateway closed on port ${options.port}`)
+  })
 
-		setTimeout(() => {
-			server.close(() => {
-				server.removeAllListeners();
-				process.exit();
-			});
-		}, 5000);
-	});
+  server.on('request', (request, response) => {
+    let payload = request.payload.toString()
 
-	server.once('close', function () {
-		platform.log(`CoAP Gateway closed on port ${options.port}`);
-	});
+    async.waterfall([
+      async.constant(payload || '{}'),
+      async.asyncify(JSON.parse)
+    ], (error, obj) => {
+      if (error || isEmpty(obj.device)) {
+        response.code = '4.00'
+        response.end('Invalid data sent. Data must be a valid JSON String with at least a "device" field which corresponds to a registered Device ID.\n')
+        return plugin.logException(new Error('Invalid data sent. Data must be a valid JSON String with at least a "device" field which corresponds to a registered Device ID.'))
+      }
 
-	server.on('request', (request, response) => {
-		let payload = request.payload.toString();
+      return plugin.requestDeviceInfo(obj.device).then((deviceInfo) => {
+        if (isEmpty(deviceInfo)) {
+          response.code = '4.01'
+          response.end(`Device not registered. Device ID: ${obj.device}\n`)
 
-		async.waterfall([
-			async.constant(payload || '{}'),
-			async.asyncify(JSON.parse)
-		], (error, payloadObj) => {
-			if (error || isEmpty(payloadObj.device)) {
-				response.code = '4.00';
-				response.end('Invalid data sent. Data must be a valid JSON String with at least a "device" field which corresponds to a registered Device ID.\n');
+          return plugin.log(JSON.stringify({
+            title: 'CoAP Gateway - Access Denied. Device not registered.',
+            device: obj.device
+          }))
+        }
 
-				return platform.handleException(new Error('Invalid data sent. Data must be a valid JSON String with at least a "device" field which corresponds to a registered Device ID.'));
-			}
+        let url = `${request.url}`.substr(`${request.url}`.indexOf('/'))
 
-			platform.requestDeviceInfo(payloadObj.device, (error, requestId) => {
-				let t = setTimeout(() => {
-					response.code = '4.01';
-					response.end(`Device not registered. Device ID: ${payloadObj.device}\n`);
-				}, 10000);
+        if (url === options.dataUrl && request.method === 'POST') {
+          return plugin.pipe(obj).then(() => {
+            response.code = '2.05'
+            response.end(`Data Received. Device ID: ${obj.device}. Data: ${payload}\n`)
 
-				platform.once(requestId, (deviceInfo) => {
-					clearTimeout(t);
+            return plugin.log(JSON.stringify({
+              title: 'CoAP Gateway - Data Received',
+              device: obj.device,
+              data: obj
+            }))
+          })
+        } else if (url === options.commandUrl && request.method === 'POST') {
+          if (isEmpty(obj.target) || isEmpty(obj.command)) {
+            return plugin.logException(new Error('Invalid message or command. Message must be a valid JSON String with "target" and "message" fields. "target" is a registered Device ID. "message" is the payload.'))
+          }
 
-					if (isEmpty(deviceInfo)) {
-						response.code = '4.01';
-						response.end(`Device not registered. Device ID: ${payloadObj.device}\n`);
+          return plugin.relayCommand(obj.command, obj.target, obj.deviceGroup).then(() => {
+            response.code = '2.05'
+            response.end(`Message Received. Device ID: ${obj.device}. Message: ${payload}\n`)
 
-						return platform.log(JSON.stringify({
-							title: 'CoAP Gateway - Access Denied. Device not registered.',
-							device: payloadObj.device
-						}));
-					}
+            return plugin.log(JSON.stringify({
+              title: 'CoAP Gateway - Message Received',
+              source: obj.device,
+              target: obj.target,
+              message: obj.message
+            }))
+          })
+        } else {
+          response.code = '4.04'
+          response.end(`Path not found. Kindly check your request path and method. URL: ${request.url}\n`)
+          return plugin.logException(new Error(`Invalid url specified. URL: ${url}`))
+        }
+      }).catch((err) => {
+        if (err.message === 'Request for device information has timed out.') {
+          response.code = '4.01'
+          response.end(`Device not registered. Device ID: ${obj.device}\n`)
+        }
 
-					let url = `${request.url}`.substr(`${request.url}`.indexOf('/'));
+        plugin.logException(err)
+        console.error(err)
+      })
+    })
+  })
 
-					if (url === options.data_url && request.method === 'POST') {
-						platform.processData(payloadObj.device, payload);
+  server.listen(options.port, () => {
+    plugin.log(`CoAP Gateway initialized on port ${options.port}`)
+    plugin.emit('init')
+  })
+})
 
-						response.code = '2.05';
-						response.end(`Data Received. Device ID: ${payloadObj.device}. Data: ${payload}\n`);
-
-						platform.log(JSON.stringify({
-							title: 'CoAP Gateway - Data Received',
-							device: payloadObj.device,
-							data: payloadObj
-						}));
-					}
-					else if (url === options.message_url && request.method === 'POST') {
-						if (isEmpty(payloadObj.target) || isEmpty(payloadObj.message)) return platform.handleException(new Error('Invalid message or command. Message must be a valid JSON String with "target" and "message" fields. "target" is a registered Device ID. "message" is the payload.'));
-
-						platform.sendMessageToDevice(payloadObj.target, payloadObj.message);
-
-						response.code = '2.05';
-						response.end(`Message Received. Device ID: ${payloadObj.device}. Message: ${payload}\n`);
-
-						platform.log(JSON.stringify({
-							title: 'CoAP Gateway - Message Received',
-							source: payloadObj.device,
-							target: payloadObj.target,
-							message: payloadObj.message
-						}));
-					}
-					else if (url === options.groupmessage_url && request.method === 'POST') {
-						if (isEmpty(payloadObj.target) || isEmpty(payloadObj.message)) return platform.handleException(new Error('Invalid group message or command. Group messages must be a valid JSON String with "target" and "message" fields. "target" is a device group id or name. "message" is the payload.'));
-
-						platform.sendMessageToGroup(payloadObj.target, payloadObj.message);
-
-						response.code = '2.05';
-						response.end(`Group Message Received. Device ID: ${payloadObj.device}. Message: ${payload}\n`);
-
-						platform.log(JSON.stringify({
-							title: 'CoAP Gateway - Group Message Received',
-							source: payloadObj.device,
-							target: payloadObj.target,
-							message: payloadObj.message
-						}));
-					}
-					else {
-						response.code = '4.04';
-						response.end(`Path not found. Kindly check your request path and method. URL: ${request.url}\n`);
-						platform.handleException(new Error(`Invalid url specified. URL: ${url}`));
-					}
-				});
-			});
-		});
-	});
-
-	server.listen(options.port, () => {
-		platform.log(`CoAP Gateway initialized on port ${options.port}`);
-		platform.notifyReady();
-	});
-});
+module.exports = plugin

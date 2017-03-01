@@ -1,170 +1,224 @@
-'use strict';
+/* global describe, it, after, before */
+'use strict'
 
-const PORT              = 8080,
-	  METHOD            = 'POST',
-	  DATA_PATH         = 'test/coaptestdatapath',
-	  MESSAGE_PATH      = 'coaptestmessagepath',
-	  GROUPMESSAGE_PATH = 'reekoh/coaptestgroupmessagepath',
-	  DEVICE_ID1        = '567827489028375',
-	  DEVICE_ID2        = '567827489028376';
+const coap = require('coap')
+const async = require('async')
+const amqp = require('amqplib')
+const should = require('should')
+const isEmpty = require('lodash.isempty')
 
-var cp     = require('child_process'),
-	assert = require('assert'),
-	coap   = require('coap'),
-	coapGateway;
+const Broker = require('../node_modules/reekoh/lib/broker.lib')
 
-describe('CoAP Gateway', function () {
-	this.slow(5000);
+const PORT = 8182
+const PLUGIN_ID = 'demo.gateway'
+const BROKER = 'amqp://guest:guest@127.0.0.1/'
+const OUTPUT_PIPES = 'demo.outpipe1,demo.outpipe2'
+const COMMAND_RELAYS = 'demo.relay1,demo.relay2'
 
-	after('terminate child process', function (done) {
-		this.timeout(5000);
+let conf = {
+  port: PORT,
 
-		coapGateway.send({
-			type: 'close'
-		});
+  method: 'POST',
+  dataUrl: 'test/coaptestdatapath',
+  commandUrl: 'test/coaptestcmdpath',
 
-		setTimeout(function () {
-			coapGateway.kill('SIGKILL');
-			done();
-		}, 4000);
-	});
+  deviceId1: '567827489028375',
+  deviceId2: '567827489028376'
+}
 
-	describe('#spawn', function () {
-		it('should spawn a child process', function () {
-			assert.ok(coapGateway = cp.fork(process.cwd()), 'Child process not spawned.');
-		});
-	});
+let _app = null
+let _conn = null
+let _broker = null
+let _channel = null
 
-	describe('#handShake', function () {
-		it('should notify the parent process when ready within 5 seconds', function (done) {
-			this.timeout(5000);
+describe('CoAP Gateway', () => {
+  before('init', () => {
+    process.env.BROKER = BROKER
+    process.env.PLUGIN_ID = PLUGIN_ID
+    process.env.OUTPUT_PIPES = OUTPUT_PIPES
+    process.env.COMMAND_RELAYS = COMMAND_RELAYS
+    process.env.CONFIG = JSON.stringify(conf)
 
-			coapGateway.on('message', function (message) {
-				if (message.type === 'ready')
-					done();
-				else if (message.type === 'requestdeviceinfo') {
-					if (message.data.deviceId === DEVICE_ID1 || message.data.deviceId === DEVICE_ID2) {
-						coapGateway.send({
-							type: message.data.requestId,
-							data: {
-								_id: message.data.deviceId
-							}
-						});
-					}
-				}
-			});
+    _broker = new Broker()
 
-			coapGateway.send({
-				type: 'ready',
-				data: {
-					options: {
-						port: PORT,
-						data_url: DATA_PATH,
-						message_url: MESSAGE_PATH,
-						groupmessage_url: GROUPMESSAGE_PATH
-					}
-				}
-			}, function (error) {
-				assert.ifError(error);
-			});
-		});
-	});
+    amqp.connect(BROKER).then((conn) => {
+      _conn = conn
+      return conn.createChannel()
+    }).then((channel) => {
+      _channel = channel
+    }).catch((err) => {
+      console.log(err)
+    })
+  })
 
-	describe('#data', function () {
-		it('should process the data', function (done) {
-			this.timeout(5000);
+  after('terminate', function () {
+    _conn.close()
+  })
 
-			let req     = coap.request({
-					port: PORT,
-					pathname: DATA_PATH,
-					method: METHOD
-				}),
-				payload = {
-					device: DEVICE_ID1,
-					temperature: 40,
-					co2_level: 10
-				};
+  describe('#start', function () {
+    it('should start the app', function (done) {
+      this.timeout(10000)
+      _app = require('../app')
+      _app.once('init', done)
+    })
+  })
 
-			req.write(JSON.stringify(payload));
-			req.on('response', (res) => {
-				assert.equal('2.05', res.code);
-				assert.ok(res.payload.toString().startsWith('Data Received.'));
-				done();
-			});
-			req.end();
-		});
-	});
+  describe('#test RPC preparation', () => {
+    it('should connect to broker', (done) => {
+      _broker.connect(BROKER).then(() => {
+        return done() || null
+      }).catch((err) => {
+        done(err)
+      })
+    })
 
-	describe('#message', function () {
-		it('should send the message', function (done) {
-			this.timeout(5000);
+    it('should spawn temporary RPC server', (done) => {
+      // if request arrives this proc will be called
+      let sampleServerProcedure = (msg) => {
+        return new Promise((resolve, reject) => {
+          async.waterfall([
+            async.constant(msg.content.toString('utf8')),
+            async.asyncify(JSON.parse)
+          ], (err, parsed) => {
+            if (err) return reject(err)
+            parsed.foo = 'bar'
+            resolve(JSON.stringify(parsed))
+          })
+        })
+      }
 
-			let req     = coap.request({
-					port: PORT,
-					pathname: MESSAGE_PATH,
-					method: METHOD
-				}),
-				payload = {
-					device: DEVICE_ID1,
-					target: DEVICE_ID2,
-					message: 'ACTIVATE'
-				};
+      _broker.createRPC('server', 'deviceinfo').then((queue) => {
+        return queue.serverConsume(sampleServerProcedure)
+      }).then(() => {
+        // Awaiting RPC requests
+        done()
+      }).catch((err) => {
+        done(err)
+      })
+    })
+  })
 
-			req.write(JSON.stringify(payload));
-			req.on('response', (res) => {
-				assert.equal('2.05', res.code);
-				assert.ok(res.payload.toString().startsWith('Message Received.'));
-				done();
-			});
-			req.end();
-		});
-	});
+  describe('#data', function () {
+    it('should process the data', function (done) {
+      this.timeout(10000)
 
-	describe('#groupmessage', function () {
-		it('should send a group message using a device group id', function (done) {
-			this.timeout(5000);
+      let req = coap.request({
+          port: conf.port,
+          pathname: conf.dataUrl,
+          method: conf.method
+        }),
+        payload = {
+          device: conf.deviceId1,
+          temperature: 40,
+          co2_level: 10
+        }
 
-			let req     = coap.request({
-					port: PORT,
-					pathname: GROUPMESSAGE_PATH,
-					method: METHOD
-				}),
-				payload = {
-					device: DEVICE_ID1,
-					message: 'ACTIVATE',
-					target: '575e559e86c77818257d260a'
-				};
+      req.write(JSON.stringify(payload))
+      req.on('response', (res) => {
+        should.equal('2.05', res.code)
+        should.ok(res.payload.toString().startsWith('Data Received.'))
+        done()
+      })
 
-			req.write(JSON.stringify(payload));
-			req.on('response', (res) => {
-				assert.equal('2.05', res.code);
-				assert.ok(res.payload.toString().startsWith('Group Message Received.'));
-				done();
-			});
-			req.end();
-		});
+      req.end()
+    })
+  })
 
-		it('should send a group message using a device group name', function (done) {
-			this.timeout(5000);
+  describe('#command', function () {
+    it('should create commandRelay listener', function (done) {
+      this.timeout(10000)
 
-			let req     = coap.request({
-					port: PORT,
-					pathname: GROUPMESSAGE_PATH,
-					method: METHOD
-				}),
-				payload = {
-					device: DEVICE_ID1,
-					message: 'ACTIVATE',
-					target: 'GPS Trackers'
-				};
+      let cmdRelays = `${COMMAND_RELAYS || ''}`.split(',').filter(Boolean)
 
-			req.write(JSON.stringify(payload));
-			req.on('response', (res) => {
-				assert.equal('2.05', res.code);
-				assert.ok(res.payload.toString().startsWith('Group Message Received.'));
-				done();
-			});
-			req.end();
-		});
-	});
-});
+      async.each(cmdRelays, (cmdRelay, cb) => {
+        _channel.consume(cmdRelay, (msg) => {
+          if (!isEmpty(msg)) {
+            async.waterfall([
+              async.constant(msg.content.toString('utf8') || '{}'),
+              async.asyncify(JSON.parse)
+            ], (err, obj) => {
+              if (err) return console.log('parse json err. supplied invalid data')
+
+              let devices = []
+
+              if (Array.isArray(obj.devices)) {
+                devices = obj.devices
+              } else {
+                devices.push(obj.devices)
+              }
+
+              if (obj.deviceGroup) {
+                // get devices from platform agent
+                // then push to devices[]
+              }
+
+              async.each(devices, (device, cb) => {
+                _channel.publish('amq.topic', `${cmdRelay}.topic`, new Buffer(JSON.stringify({
+                  sequenceId: obj.sequenceId,
+                  commandId: new Date().getTime().toString(), // uniq
+                  command: obj.command,
+                  device: device
+                })))
+                cb()
+              }, (err) => {
+                should.ifError(err)
+              })
+            })
+
+            // _channel.publish('amq.topic', `${cmdRelay}.topic`, new Buffer(msg.content.toString('utf8')))
+          }
+          _channel.ack(msg)
+        }).then(() => {
+          return cb()
+        }).catch((err) => {
+          should.ifError(err)
+        })
+      }, done)
+    })
+
+    it('should be able to send command to device', function (done) {
+      this.timeout(10000)
+
+      let req = coap.request({
+          port: conf.port,
+          pathname: conf.commandUrl,
+          method: conf.method
+        }),
+        payload = {
+          device: conf.deviceId1,
+          target: conf.deviceId2,
+          deviceGroup: '',
+          command: 'ACTIVATE'
+        }
+
+      req.write(JSON.stringify(payload))
+      req.on('response', (res) => {
+        should.equal('2.05', res.code)
+        should.ok(res.payload.toString().startsWith('Message Received.'))
+        done()
+      })
+
+      req.end()
+    })
+
+    /*
+
+     NOTE: not testable yet since we cant pull devices from group yet
+
+    it('should be able to send command to group of device', function (done) {
+      this.timeout(10000)
+
+      _ws.send(JSON.stringify({
+        topic: 'command',
+        deviceGroup: 'group123',
+        command: 'ACTIVATE'
+      }))
+
+      _app.once('command.ok', () => {
+        setTimeout(done, 5000)
+      })
+    })
+
+     */
+  })
+})
