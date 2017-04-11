@@ -147,10 +147,10 @@ describe('CoAP Gateway', () => {
                 devices.push(obj.devices)
               }
 
-              if (obj.deviceGroup) {
+              // if (obj.deviceGroup) {
                 // get devices from platform agent
                 // then push to devices[]
-              }
+              // }
 
               async.each(devices, (device, cb) => {
                 _channel.publish('amq.topic', `${cmdRelay}.topic`, new Buffer(JSON.stringify({
